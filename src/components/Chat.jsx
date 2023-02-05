@@ -1,96 +1,81 @@
-import { useEffect, useState } from "react";
 import io from "socket.io-client";
+import { useState, useEffect } from "react";
+import { nanoid } from "nanoid";
 
-const socket = {
-  current: io("https://weekend-lesson-last.onrender.com"),
-};
+const socket = { current: io("https://weekend-lesson-last.onrender.com") };
 
 export const Chat = () => {
-  const [onlineUsers, setOnlineUsers] = useState();
-  const [name, setName] = useState("");
-  const [messagesList, setMessagesList] = useState([]);
-  const [text, setText] = useState("");
+  const [onlineUsers, setOnlineUsers] = useState(0);
+  const [message, setMessage] = useState("");
+  const [messageList, setMessageList] = useState([]);
+  const [currentUser, setCurrentUser] = useState("");
 
   useEffect(() => {
+    socket.current.on("changeOnline", (usersNumber) => {
+      console.log(usersNumber);
+      setOnlineUsers(usersNumber);
+    });
     return () => {
-      socket.current.off("disconnect", name);
+      socket.current.off("disconnect", currentUser);
     };
   }, []);
 
   useEffect(() => {
-    socket.current.on("Changed online", (data) => {
+    socket.current.on("showMessage", (data) => {
+      setMessageList([...messageList, data]);
+    });
+    socket.current.on("changeOnline", (data) => {
       setOnlineUsers(data);
     });
-    socket.current.on("Update message list", (res) => {
-      setMessagesList([...messagesList, res]);
-    });
-  }, [messagesList, onlineUsers]);
+  }, [messageList]);
 
-  const handleNameClick = (e) => {
-    e.preventDefault();
-
-    socket.current.emit("Add new user", name);
-    socket.current.on("Changed online", (data) => {
-      setOnlineUsers(data);
-    });
-    socket.current.on("fetch messages", (messages) => {
-      setMessagesList(messages);
-    });
+  const handleClick = (event) => {
+    event.preventDefault();
+    socket.current.emit("addUser", { name: currentUser, id: nanoid() });
   };
 
-  const handleTextClick = (e) => {
-    e.preventDefault();
+  const handleSendMessage = (event) => {
+    event.preventDefault();
 
-    socket.current.emit("New Message", {
-      name,
-      text,
-    });
-    socket.current.on("Update message list", (res) => {
-      setMessagesList([...messagesList, res]);
-    });
+    socket.current.emit("newMessage", { name: currentUser, text: message });
+    setMessageList([...messageList, { name: currentUser, text: message }]);
   };
+
   return (
-    <div>
+    <>
+      <h1>Hello in the best chat ever!</h1>
       <p>Users online: {onlineUsers}</p>
-      <form action="">
+      <p>Current user: {currentUser}</p>
+      <form>
         <label>
-          {" "}
           Enter your name
           <input
             type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.currentTarget.value);
-            }}
+            value={currentUser}
+            onChange={(event) => setCurrentUser(event.currentTarget.value)}
           />
         </label>
-        <button type="submit" onClick={handleNameClick}>
-          Submit
-        </button>
+        <button onClick={handleClick}>Submit</button>
       </form>
-      <ul>
-        {messagesList.map((item) => (
-          <li key={item._id}>
-            <span>{item.name}</span>:<span>{item.text}</span>
-          </li>
-        ))}
-      </ul>
-      <form action="">
+      <form>
         <label>
-          {" "}
           Enter your message
           <input
             type="text"
-            value={text}
-            onChange={(e) => {
-              setText(e.currentTarget.value);
-            }}
+            value={message}
+            onChange={(event) => setMessage(event.currentTarget.value)}
           />
         </label>
-        <button type="submit" onClick={handleTextClick}>
-          Submit
-        </button>
+        <button onClick={handleSendMessage}>Submit</button>
       </form>
-    </div>
+
+      <ul>
+        {messageList.map((item, idx) => (
+          <li key={idx}>
+            <span>{item.name}</span>: <span>{item.text}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 };

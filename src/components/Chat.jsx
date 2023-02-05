@@ -2,7 +2,7 @@ import io from "socket.io-client";
 import { useState, useEffect } from "react";
 import { nanoid } from "nanoid";
 
-const socket = { current: io("https://weekend-lesson-last.onrender.com") };
+const socket = { current: io("http://localhost:3001/") };
 
 export const Chat = () => {
   const [onlineUsers, setOnlineUsers] = useState(0);
